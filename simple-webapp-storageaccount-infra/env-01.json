@@ -1,0 +1,93 @@
+{
+    "$schema":"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "storageAccountName": {
+            "type": "string"
+        },
+        "planName": {
+            "type": "string"
+        },
+        "webAppName": {
+            "type": "string"
+        }
+    },
+    "functions": [],
+    "variables": {},
+    "resources": [
+         {
+                "name": "[parameters('storageAccountName')]",
+                "type": "Microsoft.Storage/storageAccounts",
+                "apiVersion": "2019-06-01",
+                "tags": {
+                    "displayName": "[parameters('storageAccountName')]"
+                },
+                "location": "[resourceGroup().location]",
+                "kind": "StorageV2",
+                "sku": {
+                    "name": "Standard_LRS",
+                    "tier": "Standard"
+                }
+            },
+
+
+            { 
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2019-06-01",
+            "name":"[concat(parameters('storageAccountName'),'/default/input')]",
+            "dependsOn":[
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"]
+
+            },
+            {
+                "name": "[parameters('planName')]",
+                "type": "Microsoft.Web/serverfarms",
+                "apiVersion": "2018-02-01",
+                "location": "[resourceGroup().location]",
+                "sku": {
+                    "name": "S1",
+                    "capacity": 1
+                },
+                "tags": {
+                    "displayName": "[parameters('planName')]"
+                },
+                "properties": {
+                    "name": "[parameters('planName')]"
+                }
+            },
+            {
+                "name": "[parameters('webAppName')]",
+                "type": "Microsoft.Web/sites",
+                "apiVersion": "2018-11-01",
+                "location": "[resourceGroup().location]",
+                "tags": {
+                    "displayName": "[parameters('webAppName')]"
+                },
+                "dependsOn": [
+                    "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]",
+                    "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+                ],
+                "properties": {
+                    "name": "[parameters('webAppName')]",
+                    "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]",
+                    "siteConfig":{
+                        "alwaysOn": true,
+                        "appSettings": [
+                            {
+                                "name": "storageAccessKey",
+                                "value":"[listKeys(resourceId('Microsoft.Storage/storageAccounts',parameters('storageAccountName')),'2019-06-01').keys[0].value]"
+
+                            }
+                        ]
+                    }
+                }
+            }
+
+
+            
+    ],
+
+
+
+    "outputs": {}
+}
